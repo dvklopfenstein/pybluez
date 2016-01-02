@@ -32,6 +32,7 @@ def find_MS_SDK():
             if os.path.exists(candidate_sdk):
                 return candidate_sdk
 
+
 if sys.platform == 'win32':
     PSDK_PATH = find_MS_SDK()
     if PSDK_PATH is None:
@@ -48,6 +49,45 @@ if sys.platform == 'win32':
 
     # widcomm
     WC_BASE = os.path.join(os.getenv('ProgramFiles'), r"Widcomm\BTW DK\SDK")
+    if os.path.exists(WC_BASE):
+        mods.append(Extension('bluetooth._widcomm',
+                include_dirs=["%s\\Inc" % WC_BASE, ".\\port3"],
+                define_macros=[('_BTWLIB', None)],
+                library_dirs=["%s\\Release" % WC_BASE, "%s\\Lib" % PSDK_PATH],
+                libraries=["WidcommSdklib", "ws2_32", "version", "user32",
+                           "Advapi32", "Winspool", "ole32", "oleaut32"],
+                sources=["widcomm\\_widcomm.cpp",
+                         "widcomm\\inquirer.cpp",
+                         "widcomm\\rfcommport.cpp",
+                         "widcomm\\rfcommif.cpp",
+                         "widcomm\\l2capconn.cpp",
+                         "widcomm\\l2capif.cpp",
+                         "widcomm\\sdpservice.cpp",
+                         "widcomm\\util.cpp"]))
+
+elif sys.platform == 'cygwin':
+    # Before loading pybluez, load:
+    #   * Microsoft Software Design Kit
+    #   * Broadcomm Windows SDK 
+    from cygwin._util import find_MS_SDK_cygwin
+    PSDK_PATH = find_SDK_cygwin("MS")
+    if PSDK_PATH is None:
+        raise SystemExit("cygwin: Could not find the Windows Platform SDK")
+    print PSDK_PATH
+
+    lib_path = os.path.join(PSDK_PATH, 'Lib')
+    if '64' in platform.architecture()[0]:
+        lib_path = os.path.join(lib_path, 'x64')
+    mods.append(Extension('bluetooth._msbt',
+                          include_dirs=["%s\\Include" % PSDK_PATH, ".\\port3"],
+                          library_dirs=[lib_path],
+                          libraries=["WS2_32", "Irprops"],
+                          sources=['msbt\\_msbt.c']))
+
+    # widcomm
+    WC_BASE = os.path.join(os.getenv('ProgramFiles (x86)'), "Widcomm", "BTW DK", "SDK")
+    WC_BASE = find_SDK_cygwin("BT")
+    print WC_BASE
     if os.path.exists(WC_BASE):
         mods.append(Extension('bluetooth._widcomm',
                 include_dirs=["%s\\Inc" % WC_BASE, ".\\port3"],
